@@ -1,5 +1,0 @@
-# Vercel ignore file
-.env.local
-.env
-database-setup.sql
-README.md
