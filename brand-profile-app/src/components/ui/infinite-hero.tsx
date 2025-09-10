@@ -3,11 +3,12 @@
 import { useGSAP } from "@gsap/react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { gsap } from "gsap";
-import { SplitText } from "gsap/SplitText";
-import { useMemo, useRef } from "react";
+// import { SplitText } from "gsap/SplitText"; // Commented out for production deployment
+import { useMemo, useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 
-gsap.registerPlugin(SplitText);
+// Comment out SplitText for production deployment
+// gsap.registerPlugin(SplitText);
 
 interface ShaderPlaneProps {
 	vertexShader: string;
@@ -194,6 +195,12 @@ function ShaderBackground({
 	uniforms = {},
 	className = "w-full h-full",
 }: ShaderBackgroundProps) {
+	const [isMounted, setIsMounted] = useState(false);
+
+	useEffect(() => {
+		setIsMounted(true);
+	}, []);
+
 	const shaderUniforms = useMemo(
 		() => ({
 			u_time: { value: 0 },
@@ -202,6 +209,14 @@ function ShaderBackground({
 		}),
 		[uniforms],
 	);
+
+	if (!isMounted) {
+		return (
+			<div className={className}>
+				<div className="w-full h-full bg-gradient-to-br from-gray-900 to-black" />
+			</div>
+		);
+	}
 
 	return (
 		<div className={className}>
@@ -222,21 +237,26 @@ export default function InfiniteHero() {
 	const h1Ref = useRef<HTMLHeadingElement>(null);
 	const pRef = useRef<HTMLParagraphElement>(null);
 	const ctaRef = useRef<HTMLDivElement>(null);
+	const [isMounted, setIsMounted] = useState(false);
+
+	useEffect(() => {
+		setIsMounted(true);
+	}, []);
 
 	useGSAP(
 		() => {
+			if (!isMounted) return;
+
 			const ctas = ctaRef.current ? Array.from(ctaRef.current.children) : [];
 
-			const h1Split = new SplitText(h1Ref.current, { type: "lines" });
-			const pSplit = new SplitText(pRef.current, { type: "lines" });
-
+			// Fallback animation without SplitText for production
 			gsap.set(bgRef.current, { filter: "blur(28px)" });
-			gsap.set(h1Split.lines, {
+			gsap.set(h1Ref.current, {
 				opacity: 0,
 				y: 24,
 				filter: "blur(8px)",
 			});
-			gsap.set(pSplit.lines, {
+			gsap.set(pRef.current, {
 				opacity: 0,
 				y: 16,
 				filter: "blur(6px)",
@@ -246,35 +266,28 @@ export default function InfiniteHero() {
 			const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
 			tl.to(bgRef.current, { filter: "blur(0px)", duration: 1.2 }, 0)
 				.to(
-					h1Split.lines,
+					h1Ref.current,
 					{
 						opacity: 1,
 						y: 0,
 						filter: "blur(0px)",
 						duration: 0.8,
-						stagger: 0.1,
 					},
 					0.3,
 				)
 				.to(
-					pSplit.lines,
+					pRef.current,
 					{
 						opacity: 1,
 						y: 0,
 						filter: "blur(0px)",
 						duration: 0.6,
-						stagger: 0.08,
 					},
 					"-=0.3",
 				)
 				.to(ctas, { opacity: 1, y: 0, duration: 0.6, stagger: 0.08 }, "-=0.2");
-
-			return () => {
-				h1Split.revert();
-				pSplit.revert();
-			};
 		},
-		{ scope: rootRef },
+		{ scope: rootRef, dependencies: [isMounted] },
 	);
 
 	return (
